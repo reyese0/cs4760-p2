@@ -43,5 +43,28 @@ int main(int argc, char *argv[]) {
     printf("SysClockS: %d SysclockNano: %d TermTimeS: %d TermTimeNano: %d\n", startSec, startNano, endSec, endNano);
     printf("--Just Starting\n");
 
+    int lastSec = startSec;
+
+    while (1) {
+        int currentSec = myClock->seconds;
+        int currentNano = myClock->nanoseconds;
+
+        if (currentSec != lastSec) {
+            printf("WORKER PID:%d PPID:%d\n", pid, ppid);
+            printf("SysClockS: %d SysclockNano: %d TermTimeS: %d TermTimeNano: %d\n", currentSec, currentNano, endSec, endNano);
+            printf("--%d seconds have passed since starting\n", currentSec - startSec);
+            lastSec = currentSec;
+        }
+
+        //check for termination condition
+        if (currentSec > endSec || (currentSec == endSec && currentNano >= endNano)) {
+            printf("WORKER PID:%d PPID:%d\n", pid, ppid);
+            printf("SysClockS: %d SysClockNano: %d\n", currentSec, currentNano);
+            printf("--Terminating\n");
+            break;
+        }
+    }
+    
+    shmdt(myClock);
     return 0;
 }
