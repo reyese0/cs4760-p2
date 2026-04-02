@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <signal.h>
 
 #define SIZE 20
 #define SHM_KEY 1234
@@ -115,6 +116,20 @@ static int launch_worker(const MyClock *clock, int workerRunSec, int workerRunNa
 
     *launchedCount += 1;
     return 1;
+}
+
+void signal_handler(int sig) {
+    printf("\nReceived SIGALRM (60 second timeout). Cleaning up...\n");
+    
+    // Send kill signal to all children based on their PIDs in process table
+    for (int i = 0; i < 20; i++) {
+        if (processTable[i].occupied && processTable[i].pid > 0) {
+            printf("Killing child process %d\n", processTable[i].pid);
+            kill(processTable[i].pid, SIGTERM);
+        }
+    }
+    printf("OSS terminated due to 60 second timeout\n");
+    exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -260,6 +275,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Turn on alarm handler
+    signal(SIGALRM, signal_handler);
+
     printf("OSS PID:%d Terminating\n", getpid());
     printf("%d workers were launched and terminated\n", finishedChildren);
     printf("Workers ran for a combined time of %d seconds %d nanoseconds.\n", combinedRunSec, combinedRunNano);
@@ -267,6 +285,9 @@ int main(int argc, char *argv[]) {
     shmdt(myClock);
     myClock = 0;
     shmctl(shmid, IPC_RMID, NULL);
+
+    // set up alarm call
+    alarm(60);
 
     return 0;
 }
