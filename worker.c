@@ -11,6 +11,11 @@ typedef struct {
 } MyClock;
 
 int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <seconds> <nanoseconds>\n", argv[0]);
+        return 1;
+    }
+
     pid_t pid = getpid();
     pid_t ppid = getppid();
     int inputSec = atoi(argv[1]);
@@ -27,17 +32,21 @@ int main(int argc, char *argv[]) {
     }
 
     MyClock *myClock = (MyClock *)shmat(shmid, NULL, 0);
-    if (myClock <= 0 ) {
-        perror("worker: shmat error");
+    if (myClock == (void *)-1) {
+        fprintf(stderr,"Worker:... Error in shmat\n");
         return 1;
     }
 
     int startSec = myClock->seconds;
     int startNano = myClock->nanoseconds;
 
-    //calculate termination time
+    //Calculate the termination time
     int endSec = startSec + inputSec;
     int endNano = startNano + inputNano;
+    if (endNano >= 1000000000) {
+        endSec += endNano / 1000000000;
+        endNano %= 1000000000;
+    }
 
     printf("WORKER PID:%d PPID:%d\n", pid, ppid);
     printf("SysClockS: %d SysclockNano: %d TermTimeS: %d TermTimeNano: %d\n", startSec, startNano, endSec, endNano);
@@ -46,9 +55,11 @@ int main(int argc, char *argv[]) {
     int lastSec = startSec;
 
     while (1) {
+        //Check current time
         int currentSec = myClock->seconds;
         int currentNano = myClock->nanoseconds;
 
+        //Print every second
         if (currentSec != lastSec) {
             printf("WORKER PID:%d PPID:%d\n", pid, ppid);
             printf("SysClockS: %d SysclockNano: %d TermTimeS: %d TermTimeNano: %d\n", currentSec, currentNano, endSec, endNano);
@@ -56,7 +67,7 @@ int main(int argc, char *argv[]) {
             lastSec = currentSec;
         }
 
-        //check for termination condition
+        //Check for termination condition
         if (currentSec > endSec || (currentSec == endSec && currentNano >= endNano)) {
             printf("WORKER PID:%d PPID:%d\n", pid, ppid);
             printf("SysClockS: %d SysClockNano: %d\n", currentSec, currentNano);

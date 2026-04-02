@@ -1,5 +1,5 @@
 CC      = gcc
-CFLAGS  = -g3 -Wall -Wextra -std=c11
+CFLAGS  = -g3 -Wall -Wextra
 TARGET1 = worker
 TARGET2 = oss
 
